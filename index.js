@@ -63,6 +63,8 @@ class TorrentViewer {
         this.table = /** @type {HTMLTableElement} */ document.getElementById("torrent-details");
         this.warningElement = document.getElementById("warning");
 
+        this.clearEverything();
+
         try {
             const view = new DataView(fileContents);
             const dictionary = BencodeDecoder.decode(view);
@@ -73,15 +75,15 @@ class TorrentViewer {
             if (!this.fileNameElement) {
                 this.fileNameElement = document.createElement("h2");
                 this.fileNameElement.setAttribute("id", "file-name");
-                document.body.appendChild(this.fileNameElement);
             }
             this.fileNameElement.innerText = `${fileName} (${fileSize} bytes)`;
+            document.body.appendChild(this.fileNameElement);
 
             if (!this.table) {
                 this.table = document.createElement("table");
                 this.table.setAttribute("id", "torrent-details");
-                document.body.appendChild(this.table);
             }
+            document.body.appendChild(this.table);
 
             this.upsertRow("announce", torrent.announce);
             this.upsertRow("announce-list", torrent.announceList ? torrent.announceList.join("<br>") : "not specified");
@@ -94,22 +96,49 @@ class TorrentViewer {
                 torrent.files.map(file => `${file.name} (${file.length} bytes)`).join("<br>") :
                 "not specified");
 
-            this.warningElement && document.body.removeChild(this.warningElement);
+            this.showClearButton();
 
             return true;
 
         } catch (e) {
-            this.fileNameElement && document.body.removeChild(this.fileNameElement);
-            this.table && document.body.removeChild(this.table);
             if (!this.warningElement) {
                 this.warningElement = document.createElement("h2");
                 this.warningElement.setAttribute("id", "warning");
-                document.body.appendChild(this.warningElement);
             }
+            document.body.appendChild(this.warningElement);
             this.warningElement.innerHTML = `Error opening "${fileName}", probably not a valid .torrent file`;
         }
 
         return false;
+    }
+
+    clearEverything() {
+        this.fileNameElement && this.fileNameElement.remove();
+        this.table && this.table.remove();
+        this.warningElement && this.warningElement.remove();
+
+        localStorage.clear();
+
+        this.hideClearButton();
+    }
+
+    showClearButton() {
+        this.toggleClearButton(true);
+    }
+
+    hideClearButton() {
+        this.toggleClearButton(false);
+    }
+
+    toggleClearButton(visible) {
+        if (!this.clearButton) {
+            this.clearButton = document.createElement("button");
+            this.clearButton.innerText = "Clear";
+            this.clearButton.addEventListener("click", this.clearEverything.bind(this));
+        }
+
+        this.clearButton.style.display = visible ? "block" : "none";
+        document.body.appendChild(this.clearButton);
     }
 
     upsertRow(key, value) {
