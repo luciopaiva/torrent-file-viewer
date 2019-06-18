@@ -8,6 +8,8 @@ class TorrentViewer {
     table = null;
     /** @type {HTMLElement} */
     fileNameElement = null;
+    /** @type {HTMLElement} */
+    warningElement = null;
 
     constructor () {
         const html = document.documentElement;
