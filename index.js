@@ -4,8 +4,10 @@ import Torrent from "./torrent.js";
 
 class TorrentViewer {
 
-    /** @private {HTMLTableElement} */
+    /** @type {HTMLTableElement} */
     table = null;
+    /** @type {HTMLElement} */
+    fileNameElement = null;
 
     constructor () {
         const html = document.documentElement;
@@ -52,35 +54,52 @@ class TorrentViewer {
      * @param {Number} fileSize
      */
     parse(fileContents, fileName, fileSize) {
-        const view = new DataView(fileContents);
-        const dictionary = BencodeDecoder.decode(view);
-
-        const torrent = new Torrent(dictionary);
-
         this.fileNameElement = document.getElementById("file-name");
-        if (!this.fileNameElement) {
-            this.fileNameElement = document.createElement("h2");
-            this.fileNameElement.setAttribute("id", "file-name");
-            document.body.appendChild(this.fileNameElement);
-        }
-        this.fileNameElement.innerText = `${fileName} (${fileSize} bytes)`;
-
         this.table = /** @type {HTMLTableElement} */ document.getElementById("torrent-details");
-        if (!this.table) {
-            this.table = document.createElement("table");
-            this.table.setAttribute("id", "torrent-details");
-            document.body.appendChild(this.table);
-        }
+        this.warningElement = document.getElementById("warning");
 
-        this.upsertRow("announce", torrent.announce);
-        this.upsertRow("announce-list", torrent.announceList ? torrent.announceList.join("<br>") : "not specified");
-        this.upsertRow("creation-date", torrent.creationDate ? torrent.creationDate.toISOString() : "unknown");
-        this.upsertRow("length", torrent.length > 0 ? torrent.length + " bytes" : "not specified");
-        this.upsertRow("name", torrent.name ? torrent.name : "not specified");
-        this.upsertRow("piece-length", torrent.pieceLength + " bytes");
-        this.upsertRow("pieces", torrent.pieces.length + " pieces");
-        this.upsertRow("files", torrent.files ?
-            torrent.files.map(file => `${file.name} (${file.length} bytes)`).join("<br>") : "not specified");
+        try {
+            const view = new DataView(fileContents);
+            const dictionary = BencodeDecoder.decode(view);
+            console.info("Raw dictionary read from .torrent file:");
+            console.info(dictionary);
+            const torrent = new Torrent(dictionary);
+
+            if (!this.fileNameElement) {
+                this.fileNameElement = document.createElement("h2");
+                this.fileNameElement.setAttribute("id", "file-name");
+                document.body.appendChild(this.fileNameElement);
+            }
+            this.fileNameElement.innerText = `${fileName} (${fileSize} bytes)`;
+
+            if (!this.table) {
+                this.table = document.createElement("table");
+                this.table.setAttribute("id", "torrent-details");
+                document.body.appendChild(this.table);
+            }
+
+            this.upsertRow("announce", torrent.announce);
+            this.upsertRow("announce-list", torrent.announceList ? torrent.announceList.join("<br>") : "not specified");
+            this.upsertRow("creation-date", torrent.creationDate ? torrent.creationDate.toISOString() : "unknown");
+            this.upsertRow("length", torrent.length > 0 ? torrent.length + " bytes" : "not specified");
+            this.upsertRow("name", torrent.name ? torrent.name : "not specified");
+            this.upsertRow("piece-length", torrent.pieceLength + " bytes");
+            this.upsertRow("pieces", torrent.pieces.length + " pieces");
+            this.upsertRow("files", torrent.files ?
+                torrent.files.map(file => `${file.name} (${file.length} bytes)`).join("<br>") :
+                "not specified");
+
+            this.warningElement && document.body.removeChild(this.warningElement);
+        } catch (e) {
+            this.fileNameElement && document.body.removeChild(this.fileNameElement);
+            this.table && document.body.removeChild(this.table);
+            if (!this.warningElement) {
+                this.warningElement = document.createElement("h2");
+                this.warningElement.setAttribute("id", "warning");
+                document.body.appendChild(this.warningElement);
+            }
+            this.warningElement.innerHTML = `Error opening "${fileName}", probably not a valid .torrent file`;
+        }
     }
 
     upsertRow(key, value) {
@@ -116,7 +135,7 @@ class TorrentViewer {
     }
 
     deserializeSampleAndRead() {
-        const base64 = localStorage.getItem("sample");
+        const base64 = localStorage.getItem("sample-contents");
         if (base64) {
             const string = atob(base64);
             const byteBuffer = new Uint8Array(string.length);
