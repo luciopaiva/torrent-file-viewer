@@ -1,5 +1,6 @@
 
 import BencodeDecoder from "./bencode-decoder.js";
+import Torrent from "./torrent.js";
 
 class TorrentViewer {
 
@@ -8,7 +9,7 @@ class TorrentViewer {
         html.addEventListener("dragover", event => event.preventDefault());
         html.addEventListener("drop", this.drop.bind(this));
 
-        TorrentViewer.deserializeAndRead();
+        this.deserializeAndRead();
     }
 
     drop(event) {
@@ -37,10 +38,15 @@ class TorrentViewer {
         const result = /** @type {ArrayBuffer} */ fileReader.result;
 
         TorrentViewer.serializeAndSave(result);
+        this.parse(result);
+    }
 
-        const view = new DataView(result);
+    parse(arrayBuffer) {
+        const view = new DataView(arrayBuffer);
+        const dictionary = BencodeDecoder.decode(view);
 
-        const parser = new BencodeDecoder(view);
+        const torrent = new Torrent(dictionary);
+        console.info(torrent);
     }
 
     /**
@@ -57,15 +63,16 @@ class TorrentViewer {
         console.info(base64);
     }
 
-    static deserializeAndRead() {
+    deserializeAndRead() {
         const base64 = localStorage.getItem("sample");
         if (base64) {
             const string = atob(base64);
-            const buffer = new Uint8Array(string.length);
-            for (let i = 0; i < buffer.byteLength; i++) {
-                buffer[i] = string.charCodeAt(i);
+            const byteBuffer = new Uint8Array(string.length);
+            for (let i = 0; i < byteBuffer.byteLength; i++) {
+                byteBuffer[i] = string.charCodeAt(i);
             }
-            new BencodeDecoder(new DataView(buffer.buffer));
+
+            this.parse(byteBuffer.buffer);
         }
     }
 }

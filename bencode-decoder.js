@@ -1,5 +1,5 @@
 
-import { assert } from "./utils.js";
+import { assert, arrayBufferToUtf8 } from "./utils.js";
 
 export default class BencodeDecoder {
 
@@ -10,25 +10,38 @@ export default class BencodeDecoder {
     static COLON = ":".charCodeAt(0);
     static DIGITS = "0123456789".split("").map(d => d.charCodeAt(0));
 
-    static utf8Decoder = new TextDecoder("utf-8");
-
     /** @type {DataView} */
     view = null;
 
+    /**
+     * @param {DataView} view
+     */
+    static decode(view) {
+        const decoder = new BencodeDecoder(view);
+        return decoder.result;
+    }
+
+    /**
+     * @private
+     * @param {DataView} view
+     */
     constructor (view) {
         this.view = view;
         this.index = 0;
-        console.info(this.parseDictionary());
+        this.result = this.parseDictionary();
     }
 
+    /** @private */
     nextByte() {
         return this.view.getUint8(this.index++);
     }
 
+    /** @private */
     unread() {
         this.index--;
     }
 
+    /** @private */
     parseDictionary() {
         const begin = this.nextByte();
         assert(begin === BencodeDecoder.DICTIONARY_BEGIN, "Expected dictionary");
@@ -47,6 +60,7 @@ export default class BencodeDecoder {
         return dict;
     }
 
+    /** @private */
     parseValue() {
         const cmd = this.nextByte();
         this.unread();
@@ -67,6 +81,7 @@ export default class BencodeDecoder {
         }
     }
 
+    /** @private */
     parseList() {
         assert(this.nextByte() === BencodeDecoder.LIST_BEGIN, "Expected list begin marker");
 
@@ -82,6 +97,7 @@ export default class BencodeDecoder {
         return list;
     }
 
+    /** @private */
     parseInteger() {
         assert(this.nextByte() === BencodeDecoder.INTEGER_BEGIN, "Expected integer begin marker");
         const integer = this.parseBaseTenNumber();
@@ -89,16 +105,19 @@ export default class BencodeDecoder {
         return integer;
     }
 
+    /** @private */
     parseDictionaryKey() {
-        return BencodeDecoder.utf8Decoder.decode(this.parseByteString());
+        return arrayBufferToUtf8(this.parseByteString());
     }
 
+    /** @private */
     parseByteString() {
         const len = this.parseBaseTenNumber();
         this.matchColon();
         return this.parseString(len);
     }
 
+    /** @private */
     parseBaseTenNumber() {
         let str = "";
         let code = this.nextByte();
@@ -112,18 +131,15 @@ export default class BencodeDecoder {
         return parseInt(str, 10);
     }
 
+    /** @private */
     matchColon() {
         assert(this.nextByte() === BencodeDecoder.COLON, "Expected colon");
     }
 
+    /** @private */
     parseString(length) {
         let start = this.index;
         this.index += length;
         return this.view.buffer.slice(start, this.index);
-        // let str = "";
-        // for (let i = 0; i < length; i++) {
-        //     str += String.fromCharCode(this.nextByte());
-        // }
-        // return str;
     }
 }
