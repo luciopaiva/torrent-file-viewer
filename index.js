@@ -44,14 +44,17 @@ class TorrentViewer {
         const fileReader = /** @type {FileReader} */ event.target;
         const fileContents = /** @type {ArrayBuffer} */ fileReader.result;
 
-        TorrentViewer.serializeSampleAndSave(fileContents, fileName, fileSize);  // ToDo may want to remove this after debugging is done
-        this.parse(fileContents, fileName, fileSize);
+        if (this.parse(fileContents, fileName, fileSize)) {
+            // ToDo may want to remove this after debugging is done
+            TorrentViewer.serializeSampleAndSave(fileContents, fileName, fileSize);
+        }
     }
 
     /**
      * @param {ArrayBuffer} fileContents
      * @param {String} fileName
      * @param {Number} fileSize
+     * @return {Boolean} whether parsing succeeded
      */
     parse(fileContents, fileName, fileSize) {
         this.fileNameElement = document.getElementById("file-name");
@@ -90,6 +93,9 @@ class TorrentViewer {
                 "not specified");
 
             this.warningElement && document.body.removeChild(this.warningElement);
+
+            return true;
+
         } catch (e) {
             this.fileNameElement && document.body.removeChild(this.fileNameElement);
             this.table && document.body.removeChild(this.table);
@@ -100,6 +106,8 @@ class TorrentViewer {
             }
             this.warningElement.innerHTML = `Error opening "${fileName}", probably not a valid .torrent file`;
         }
+
+        return false;
     }
 
     upsertRow(key, value) {
