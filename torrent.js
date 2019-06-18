@@ -33,7 +33,9 @@ export default class Torrent {
             this.announceList = announceList.flat(Number.POSITIVE_INFINITY)
                 .map(tracker => arrayBufferToUtf8(tracker));
         }
-        this.creationDate = new Date(dictionary["creation date"] * 1000);
+        if (dictionary["creation date"]) {
+            this.creationDate = new Date(dictionary["creation date"] * 1000);
+        }
         const info = dictionary["info"];
         this.length = info["length"];
         this.name = arrayBufferToUtf8(info["name"]);
